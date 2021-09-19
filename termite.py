@@ -3,13 +3,13 @@ import random
 
 pygame.init()
 
-block_size = 5
+block_size = 10
 width, height = 64, 64
 size = [width*block_size, height*block_size]
 
 color_bg = [0, 0, 0]
-color_wood = [255,0,0]
-color_termite = [255,255,0]
+color_wood = [255,0,0] # red
+color_termite = [200,200,0] # yellow
 
 directions = [(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(0,1),(1,-1),(-1,0)]
 
@@ -25,7 +25,7 @@ def add_wood():
 
 def add_termite():
     # left, top, facing
-    t = [random.randint(0, width), random.randrange(height), random.randrange(len(directions))]
+    t = [random.randint(0, width), random.randrange(height), random.randrange(len(directions)), False]
     termites.append(t)
 
 def termite_tick(t):
