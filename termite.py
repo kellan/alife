@@ -49,6 +49,9 @@ class Termite:
         self.y = y
         self.carrying = False
 
+    def flip_direction(self):
+        self.facing = (abs(self.facing[0]), abs(self.facing[1]))
+
     def random_direction(self):
         return random.choice(self.directions)
 
@@ -63,8 +66,8 @@ class Game:
         self.color_termite = [200,200,0] # yellow
 
         self.world = World(self.height, self.width)        
-        self.world.init_wood(50)
-        self.world.init_termites(10)
+        self.world.init_wood( int(0.1 * self.width * self.height) ) 
+        self.world.init_termites( int(0.01 * self.width * self.height) )
 
     def paint_block(self, color, left, top):
         #Rect(left, top, width, height) -> Rect
@@ -84,6 +87,21 @@ class Game:
         t.x = x
         t.y = y
 
+        # if facing wood
+        # if carrying put down
+        # else pick up
+        facing_x,facing_y = self.world.point_delta((t.x,t.y), t.facing)
+        if self.world.get_wood(facing_x,facing_y):
+            if t.carrying:
+                # put down wood
+                self.world.set_wood(t.x,t.y, True)
+                t.carrying = False
+            else:
+                # pick up wood
+                t.carrying = True # pick up wood
+                self.world.set_wood(facing_x,facing_y, False)
+            t.flip_direction()
+
         return t
 
     def paint_wood(self):
@@ -95,6 +113,10 @@ class Game:
     def paint_termites(self):
         for t in self.world.termites:
             self.paint_block(self.color_termite, t.x, t.y)
+            # if not t.carrying:
+            #     self.paint_block(self.color_termite, t.x, t.y)
+            # else:
+            #     self.paint_block(self.color_wood, t.x, t.y)
 
     def termites(self):
         return self.world.termites;
@@ -126,6 +148,6 @@ class Game:
 #termite.run()
 
 if __name__ == "__main__":
-    termite = Game(64,64)
+    termite = Game(20,20)
     termite.run()
-    
+
