@@ -1,89 +1,131 @@
 import sys, pygame
 import random
 
-pygame.init()
+class World:
+    directions = [(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(0,1),(1,-1),(-1,0)]
 
-block_size = 10
-width, height = 64, 64
-size = [width*block_size, height*block_size]
+    def __init__(self, height, width):
+        self.height = height
+        self.width = width
+        self.wood = [[False for i in range(width)] for j in range(height)]
+        self.termites = []
 
-color_bg = [0, 0, 0]
-color_wood = [255,0,0] # red
-color_termite = [200,200,0] # yellow
+    def init_wood(self, n):
+        for i in range(n):
+            (x,y) = self.random_point()
+            self.set_wood(x,y,True)
 
-directions = [(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(0,1),(1,-1),(-1,0)]
+    def init_termites(self, n):
+        for i in range(n):
+            (x,y) = self.random_point()
 
-wood = []
-termites = []
+            t = Termite(x, y)
+            self.termites.append(t)
 
-screen = pygame.display.set_mode(size)
+    def random_point(self):
+        x = random.randrange(self.width)
+        y = random.randrange(self.height)
 
-def add_wood():
-    # left, top
-    point = [random.randrange(width), random.randrange(height)]
-    wood.append(point)
+        return (x,y)
 
-def add_termite():
-    # left, top, facing
-    t = [random.randint(0, width), random.randrange(height), random.randrange(len(directions)), False]
-    termites.append(t)
+    def point_delta(self, p, direction):
+        d_x,d_y = direction
+        x = (p[0]+d_x) % self.width
+        y = (p[1]+d_y) % self.height
+        return (x, y)
 
-def termite_tick(t):
-    paint_block(color_bg, block_size, t[0], t[1]) # erase
-    t = termite_move(t)
+    def set_wood(self,x,y,val):
+        self.wood[y][x] = val
+
+    def get_wood(self,x,y):
+        return self.wood[y][x]
+
+class Termite:
+    directions = [(-1,-1),(0,-1),(1,-1),(1,0),(1,1),(0,1),(1,-1),(-1,0)]
+
+    def __init__(self, x, y):
+        self.facing = self.random_direction()
+        self.x = x
+        self.y = y
+        self.carrying = False
+
+    def random_direction(self):
+        return random.choice(self.directions)
+
+class Game:
+    def __init__(self, width, height):
+        self.block_size = 10
+        self.width = width
+        self.height = height
+
+        self.color_bg = [0, 0, 0]
+        self.color_wood = [255,0,0] # red
+        self.color_termite = [200,200,0] # yellow
+
+        self.world = World(self.height, self.width)        
+        self.world.init_wood(50)
+        self.world.init_termites(10)
+
+    def paint_block(self, color, left, top):
+        #Rect(left, top, width, height) -> Rect
+        pygame.draw.rect(
+            self.screen, 
+            color, 
+            (left*self.block_size, top*self.block_size, self.block_size, self.block_size))
+
+    def termite_move(self, t):
+        self.paint_block(self.color_bg, t.x, t.y) # erase
+
+        # 10% chance, pick a new direction
+        if (random.randrange(10) == 0):
+            t.facing = t.random_direction()
+
+        (x, y) = self.world.point_delta((t.x,t.y), t.facing)
+        t.x = x
+        t.y = y
+
+        return t
+
+    def paint_wood(self):
+        for y in range(self.world.height):
+            for x in range(self.world.width):
+                if self.world.get_wood(x,y):
+                    self.paint_block(self.color_wood, x, y)
+
+    def paint_termites(self):
+        for t in self.world.termites:
+            self.paint_block(self.color_termite, t.x, t.y)
+
+    def termites(self):
+        return self.world.termites;
+
+    def run(self):
+        pygame.init()
+        size = [self.width*self.block_size, self.height*self.block_size]
+        self.screen = pygame.display.set_mode(size)
+
+        while 1:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    sys.exit()
+
+            for t in self.termites():
+                self.termite_move(t)
+
+            # paint background
+            self.screen.fill(self.color_bg)
+
+            self.paint_wood();
+            self.paint_termites();
+
+            pygame.display.flip()
+            pygame.time.wait(50)
 
 
-    return t
+#termite = Game()
+#termite.run()
 
-def termite_move(t):
-    if (random.randrange(10) == 0):
-        t[2] = random.randrange(len(directions))
-
-    (x, y) = point_delta(t, t[2])
-    t[0] = x
-    t[1] = y
-
-    return t
-
-def point_delta(p, facing):
-    d_x,d_y = directions[facing]
-    x = (p[0]+d_x) % width
-    y = (p[1]+d_y) % height
-    return (x, y)
-
-def paint_wood():
-    for w in wood:
-        paint_block(color_wood, block_size, w[0], w[1])
-
-def paint_termites():
-    for t in termites:
-        paint_block(color_termite, block_size, t[0], t[1])
-
-def paint_block(color, block_size, left, top):
-    #Rect(left, top, width, height) -> Rect
-    pygame.draw.rect(screen, color, (left*block_size, top*block_size, block_size, block_size))
-
-for i in range(50):
-    add_wood()
-
-for i in range(10):
-    add_termite();
-
-while 1:
-    for event in pygame.event.get():
-        if event.type == pygame.QUIT:
-            sys.exit()
-
-    for i,t in enumerate(termites):
-        termite_tick(t)
-        termites[i] = t
-
-    # paint background
-    screen.fill(color_bg)
-    paint_wood()
-    paint_termites()
-
-    pygame.display.flip()
-    pygame.time.wait(50)
-
-
+if __name__ == "__main__":
+    termite = Game(64,64)
+    termite.run()
+    
